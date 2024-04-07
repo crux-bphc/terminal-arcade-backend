@@ -1,15 +1,11 @@
 import os
 from fastapi import FastAPI
-import firebase_admin
-from firebase_admin import credentials, firestore
+from api.games import router as games_router
+from firebase_config import db
 
 app = FastAPI()
 
-cred = credentials.Certificate('key.json')
-firebase_admin.initialize_app(cred)
-
-
-db = firestore.client()
+app.include_router(games_router)
 
 @app.get("/")
 def read_root():
