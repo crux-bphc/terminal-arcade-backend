@@ -11,6 +11,7 @@ async def create_game(game_title: str = Form(...), game_description: str = Form(
     bucket = storage.bucket()
     blob = bucket.blob(game_file.filename)
     blob.upload_from_string(await game_file.read())
+    blob.make_public()
     game_data = {
         'title': game_title,
         'description': game_description,
