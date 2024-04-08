@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.games import router as games_router
 from api.user import router as user_router
 from api.brython import router as brython_router
+from api.ratings import router as ratings_router
 
 from firebase_config import db
 
@@ -25,6 +26,7 @@ app.add_middleware(
 app.include_router(games_router)
 app.include_router(user_router)
 app.include_router(brython_router)
+app.include_router(ratings_router)
 
 
 @app.get("/")
