@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.games import router as games_router
 from api.user import router as user_router
+from api.login import router as login_router
 from firebase_config import db
 
 app = FastAPI()
@@ -21,6 +22,7 @@ app.add_middleware(
 
 app.include_router(games_router)
 app.include_router(user_router)
+app.include_router(login_router)
 
 @app.get("/")
 def read_root():
