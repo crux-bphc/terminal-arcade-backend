@@ -8,7 +8,7 @@ app = FastAPI()
 
 origins = [
     "https://terminal-arcade.vercel.app/",
-    "http://localhost:3000"  
+    "http://localhost:5173"  
 ]
 
 app.add_middleware(
