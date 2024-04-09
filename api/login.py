@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import jwt
 import datetime
 from firebase_config import db
+import re
 
 load_dotenv()
 
@@ -43,6 +44,11 @@ def send_email(to_address, subject, message):
 
 @router.post("/login")
 async def login(request: LoginRequest):
+    pattern = r"f20(19|20|21|22|23)\d{4}@hyderabad.bits-pilani.ac.in$"
+    
+    if not re.match(pattern, request.email):
+        return {"error": "Invalid e-mail id"}
+
     totp = pyotp.TOTP(pyotp.random_base32())
     otp = totp.now()
     while otp in otps.values():

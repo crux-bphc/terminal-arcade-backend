@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Form, UploadFile, File
+from fastapi import APIRouter
 from firebase_admin import storage
-from datetime import datetime
+import re
 from firebase_config import db 
 from pydantic import BaseModel
 
@@ -11,8 +11,12 @@ class User(BaseModel):
 
 @router.post("/users")
 async def create_user(email_id: User):
-    db.collection("users").document().set({"email_id" : email_id.email_id})
-    return {"message": "e-mail id written succesfully"}
+    pattern = r"f20(19|20|21|22|23)\d{4}@hyderabad.bits-pilani.ac.in$"
+    if re.match(pattern, email_id.email_id):
+        db.collection("users").document().set({"email_id" : email_id.email_id})
+        return {"message": "e-mail id written succesfully"}
+    else:
+        return {"error": "Invalid e-mail id"}
 
 @router.get("/users/{user_id}")
 async def get_user(user_id: str):
