@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from dotenv import load_dotenv
 import jwt
 import datetime
+from firebase_config import db
 
 load_dotenv()
 
@@ -63,12 +64,15 @@ async def verify(request: OTPVerificationRequest):
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm = 'HS256')
 
-        return {"access_token": token, "token_type": "bearer"}
+        users_ref = db.collection('users')
+        user = users_ref.where('email_id', '==', request.email).get()
+        if user:
+            user_id = user[0].id
+        else:
+            new_user = users_ref.document()
+            new_user.set({ "email_id": request.email})
+            user_id = new_user.id
+
+        return {"access_token": token, "token_type": "bearer", "user_id": user_id}
     else:
         return {"error": "Invalid OTP"}
-
-
-
-
-
-
