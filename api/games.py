@@ -6,10 +6,21 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
+import os
+
 @router.post("/games")
 async def create_game(game_title: str = Form(...), game_description: str = Form(...), creator_id: str = Form(...), game_file: UploadFile = File(...)):
+    if not game_file.filename.endswith('.py'):
+        return {"error": "Invalid file type. Only .py files are allowed."}
+
     bucket = storage.bucket()
-    blob = bucket.blob(game_file.filename)
+    base_filename, file_extension = os.path.splitext(game_file.filename)
+    filename = game_file.filename
+    counter = 1
+    while bucket.blob(filename).exists():
+        filename = f"{base_filename}_{counter}{file_extension}"
+        counter += 1
+    blob = bucket.blob(filename)
     blob.upload_from_string(await game_file.read())
     blob.make_public()
     game_data = {
