@@ -14,7 +14,7 @@ class Rating(BaseModel):
 
 @router.post("/ratings/rate")
 async def rate(rating: Rating):
-    db.collection("ratings").document().set({
+    db.collection("games").document(rating.game_id).collection("ratings").document().set({
         "game_id": rating.game_id,
         "user_id" : rating.user_id,
         "enjoyment" : rating.enjoyment,
@@ -22,9 +22,10 @@ async def rate(rating: Rating):
     })
     return {"message": "rating written succesfully"}
 
+#broken for now
 @router.get("/ratings")
 async def fetch_ratings():
-    ratings = db.collection("ratings").stream()
+    ratings = db.collection("games").document("ratings").collection("ratings").stream()
     all_ratings = [{document.id: document.to_dict()} for document in ratings]
     if ratings is not None:
         return all_ratings 
