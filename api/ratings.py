@@ -22,10 +22,9 @@ async def rate(rating: Rating):
     })
     return {"message": "rating written succesfully"}
 
-#broken for now
-@router.get("/ratings")
-async def fetch_ratings():
-    ratings = db.collection("games").document("ratings").collection("ratings").stream()
+@router.get("/games/{game_id}/ratings")
+async def fetch_ratings(game_id: str):
+    ratings = db.collection("games").document(game_id).collection("ratings").stream()
     all_ratings = [{document.id: document.to_dict()} for document in ratings]
     if ratings is not None:
         return all_ratings 
