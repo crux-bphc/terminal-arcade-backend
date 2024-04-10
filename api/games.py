@@ -22,7 +22,7 @@ async def create_game(
 
     if game_file.size > GAMEFILE_SIZE_LIMIT:
         return {
-            "error": "file is too big to be uploaded. File must must be smaller than 20KB"
+            "error": "file is too big to be uploaded. File must must be smaller than 20 KB"
         }
 
     bucket = storage.bucket()
