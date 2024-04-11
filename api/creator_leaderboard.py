@@ -30,7 +30,7 @@ def calculate_score(total_playtime: int, number_of_plays: int, total_rating: int
         raise HTTPException(status_code = 500, detail=str(e))
 
 class LeaderboardEntry(BaseModel):
-    game_id: str
+    email_id: str
     score: int
 
 async def update_creator_leaderboard(game_id: str, total_rating: int, number_of_ratings: int, total_number_of_plays_all_games: int, total_playtime_all_games: int, max_avg_playtime: int, min_avg_playtime: int):
@@ -87,9 +87,24 @@ async def get_leaderboard():
     leaderboard_ref = db.collection('leaderboard')
     leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).stream()
     sorted_leaderboard = []
+    user_scores = {}
     for entry in leaderboard_entries:
         entry_data = entry.to_dict()
-        sorted_leaderboard.append(LeaderboardEntry(game_id = entry_data.get('game_id'), score = entry_data.get('score', 0)))
+        game_id = entry_data.get('game_id')
+        game_ref = db.collection('games').document(game_id)
+        game = game_ref.get()
+        if game.exists:
+            game_data = game.to_dict()
+            creator_id = game_data.get('creator_id')
+            user_ref = db.collection('users').document(creator_id)
+            user = user_ref.get()
+            if user.exists:
+                user_data = user.to_dict()
+                email_id = user_data.get('email_id')
+                score = entry_data.get('score', 0)
+                if email_id not in user_scores or score > user_scores[email_id]:
+                    user_scores[email_id] = score
+                    sorted_leaderboard.append(LeaderboardEntry(email_id = email_id, score = score))
     return sorted_leaderboard
 
 
