@@ -6,6 +6,7 @@ from api.games import router as games_router
 from api.user import router as user_router
 from api.login import router as login_router
 from api.brython import router as brython_router
+from api.ratings import router as ratings_router
 
 app = FastAPI()
 
@@ -26,6 +27,7 @@ app.include_router(games_router)
 app.include_router(user_router)
 app.include_router(login_router)
 app.include_router(brython_router)
+app.include_router(ratings_router)
 
 app.middleware("http")(lambda request, call_next: auth_middleware(request, call_next)) 
 

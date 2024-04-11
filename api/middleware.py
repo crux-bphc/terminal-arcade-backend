@@ -13,7 +13,13 @@ async def auth_middleware(request: Request, call_next: Callable):
     if request.method == "OPTIONS" or request.url.path.startswith("/hanger"):
         return await call_next(request)
     try:
-        if request.url.path not in ("/login", "/verify-otp"):
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        
+        if request.url.path.startswith("/hanger"):
+            return await call_next(request)
+        
+        if request.url.path not in ("/login", "/verify-otp", "/docs", "/openapi.json"):
             token = request.headers.get("Authorization")
             if token is None:
                 return Response(content = json.dumps({"detail": "Invalid authentication credentials"}), status_code = 401)
@@ -21,6 +27,7 @@ async def auth_middleware(request: Request, call_next: Callable):
             email = payload.get('sub')
             if email is None:
                 return Response(content = json.dumps({"detail": "Invalid authentication credentials"}), status_code = 401)
+        
     except Exception as e:
         return Response(content = json.dumps({"detail": "Invalid authentication credentials"}), status_code = 401)
     return await call_next(request)
