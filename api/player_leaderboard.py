@@ -9,13 +9,10 @@ from datetime import datetime
 router = APIRouter()
 
 async def update_player_leaderboard(user_id: str):
-    print("in hereee")
     user_email = await get_user_email(user_id)
     if user_email is None:
-        print("here f")
         return {"message": "User not found"}
 
-    print("in here")
     leaderboard_ref = db.collection('player_leaderboard').document(user_id)
     leaderboard_entry = leaderboard_ref.get()
     current_time = datetime.now()
