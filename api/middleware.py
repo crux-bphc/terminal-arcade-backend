@@ -10,6 +10,8 @@ load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 async def auth_middleware(request: Request, call_next: Callable):
+    if request.method == "OPTIONS" or request.url.path.startswith("/hanger"):
+        return await call_next(request)
     try:
         if request.url.path not in ("/login", "/verify-otp"):
             token = request.headers.get("Authorization")
