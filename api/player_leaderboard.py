@@ -3,22 +3,23 @@ from pydantic import BaseModel
 from firebase_config import db
 from typing import List
 from google.cloud import firestore
-from api.creator_leaderboard import get_user_email
 from datetime import datetime
 import time
 
 
 router = APIRouter()
 
-async def update_player_leaderboard(user_id: str):
-    user_email = await get_user_email(user_id)
+async def update_player_leaderboard(user_email: str):
     if user_email is None:
         return {"message": "User not found"}
 
-    leaderboard_ref = db.collection('player_leaderboard').document(user_id)
-    leaderboard_entry = leaderboard_ref.get()
+    leaderboard_query = db.collection('player_leaderboard').where('email', '==', user_email)
+    leaderboard_entries = list(leaderboard_query.stream())
     current_time = datetime.now()
-    if leaderboard_entry.exists:
+
+    if leaderboard_entries:
+        leaderboard_entry = leaderboard_entries[0]
+        leaderboard_ref = db.collection('player_leaderboard').document(leaderboard_entry.id)
         leaderboard_data = leaderboard_entry.to_dict()
         current_score = leaderboard_data.get('score', 0)
         new_score = current_score + 10
@@ -28,6 +29,7 @@ async def update_player_leaderboard(user_id: str):
             'updated_at': current_time
         })
     else:
+        leaderboard_ref = db.collection('player_leaderboard').document()
         leaderboard_ref.set({
             'score': 10,
             'email': user_email,
@@ -35,7 +37,6 @@ async def update_player_leaderboard(user_id: str):
         })
 
 class PlayerLeaderboardEntry(BaseModel):
-    user_id: str
     score: int
     email: str
     updated_at: datetime
@@ -55,7 +56,7 @@ async def get_player_leaderboard():
         sorted_leaderboard = []
         for entry in leaderboard_entries:
             entry_data = entry.to_dict()
-            sorted_leaderboard.append(PlayerLeaderboardEntry(user_id = entry.id, score = entry_data.get('score', 0), email = entry_data.get('email'), updated_at = entry_data.get('updated_at')))
+            sorted_leaderboard.append(PlayerLeaderboardEntry(score = entry_data.get('score', 0), email = entry_data.get('email'), updated_at = entry_data.get('updated_at')))
         cache['player_leaderboard'] = sorted_leaderboard
         cache['last_updated'] = current_time
     return cache['player_leaderboard']
