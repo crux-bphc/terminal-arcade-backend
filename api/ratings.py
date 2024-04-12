@@ -49,11 +49,6 @@ async def rate(rating: Rating, request: Request):
     all_ratings = [{document.id: document.to_dict()} for document in ratings]
     rating_exists = check_if_rated(user_email, all_ratings)
     if rating_exists==False:
-        db.collection("games").document(rating.game_id).collection("ratings").document().set({
-            "game_id": rating.game_id,
-            "user_email" : user_email,
-            "rating" : rating.rating
-        })
         game = game_ref.get()
         if game.exists:
             game_data = game.to_dict()
@@ -64,8 +59,16 @@ async def rate(rating: Rating, request: Request):
             if user is None:
                 return {"error": "User not found."}
             user_id = user.id
+            print(user_id, " ", creator_id, " ", type(user_id), " ", type(creator_id))
             if user_id == creator_id:
+                print("here")
                 return {"error": "Creator of game cannot rate the game."}
+            
+            db.collection("games").document(rating.game_id).collection("ratings").document().set({
+                "game_id": rating.game_id,
+                "user_email" : user_email,
+                "rating" : rating.rating
+            })
             
             total_rating = game_data.get('total_rating', 0) + rating.rating
             number_of_ratings = game_data.get('number_of_ratings', 0) + 1
