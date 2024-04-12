@@ -5,6 +5,8 @@ from typing import List
 from google.cloud import firestore
 from api.creator_leaderboard import get_user_email
 from datetime import datetime
+import time
+
 
 router = APIRouter()
 
@@ -38,12 +40,22 @@ class PlayerLeaderboardEntry(BaseModel):
     email: str
     updated_at: datetime
 
+
+cache = {
+    'player_leaderboard': [],
+    'last_updated': 0
+}
+
 @router.get("/player_leaderboard", response_model=List[PlayerLeaderboardEntry])
 async def get_player_leaderboard():
-    leaderboard_ref = db.collection('player_leaderboard')
-    leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).order_by('updated_at').stream()
-    sorted_leaderboard = []
-    for entry in leaderboard_entries:
-        entry_data = entry.to_dict()
-        sorted_leaderboard.append(PlayerLeaderboardEntry(user_id = entry.id, score = entry_data.get('score', 0), email = entry_data.get('email'), updated_at = entry_data.get('updated_at')))
-    return sorted_leaderboard
+    current_time = time.time()
+    if current_time - cache['last_updated'] > 30:
+        leaderboard_ref = db.collection('player_leaderboard')
+        leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).order_by('updated_at').stream()
+        sorted_leaderboard = []
+        for entry in leaderboard_entries:
+            entry_data = entry.to_dict()
+            sorted_leaderboard.append(PlayerLeaderboardEntry(user_id = entry.id, score = entry_data.get('score', 0), email = entry_data.get('email'), updated_at = entry_data.get('updated_at')))
+        cache['player_leaderboard'] = sorted_leaderboard
+        cache['last_updated'] = current_time
+    return cache['player_leaderboard']
