@@ -28,7 +28,7 @@ def check_if_rated(user_email, ratings_list):
                 return True
     return False
 
-async def get_current_user_email(token: str) -> str:
+async def get_current_user_email(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms = ['HS256'])
         return payload.get('sub')
@@ -57,6 +57,16 @@ async def rate(rating: Rating, request: Request):
         game = game_ref.get()
         if game.exists:
             game_data = game.to_dict()
+            creator_id = game_data.get("creator_id")
+            users_ref = db.collection("users").where("email_id", "==", user_email)
+            users = users_ref.stream()
+            user = next(users, None)
+            if user is None:
+                return {"error": "User not found."}
+            user_id = user.id
+            if user_id == creator_id:
+                return {"error": "Creator of game cannot rate the game."}
+            
             total_rating = game_data.get('total_rating', 0) + rating.rating
             number_of_ratings = game_data.get('number_of_ratings', 0) + 1
             game_ref.update({
@@ -64,18 +74,8 @@ async def rate(rating: Rating, request: Request):
                 'number_of_ratings': number_of_ratings
             })
 
-            stats_ref = db.collection('game_stats').document('stats')
-            stats = stats_ref.get()
-            if stats.exists:
-                stats_data = stats.to_dict()
-                total_number_of_games = stats_data.get('number_of_games', 0)
-                min_avg_playtime = stats_data.get('min_avg_playtime', 0)
-                max_avg_playtime = stats_data.get('max_avg_playtime', 0)
-                total_playtime_all_games = stats_data.get('total_playtime_all_games', 0)
-                total_number_of_plays_all_games = stats_data.get('total_number_of_plays_all_games', 0)
-                if total_number_of_games > 5 and total_number_of_plays_all_games > 5 and number_of_ratings > 0 and total_playtime_all_games > 0 and not max_avg_playtime == min_avg_playtime:
-                    await update_creator_leaderboard(rating.game_id, total_rating, number_of_ratings, total_number_of_plays_all_games, total_playtime_all_games, max_avg_playtime, min_avg_playtime)
-
+    
+            await update_creator_leaderboard(rating.game_id, total_rating, number_of_ratings)
             await update_player_leaderboard(user_email)
             return {"message": "rating written succesfully"}
         else:

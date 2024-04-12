@@ -3,7 +3,7 @@ from firebase_admin import storage
 from datetime import datetime
 from firebase_config import db
 from pydantic import BaseModel
-from api.creator_leaderboard import update_creator_leaderboard, update_all_leaderboard
+from api.creator_leaderboard import update_creator_leaderboard
 from api.ratings import get_current_user_email
 
 GAMEFILE_SIZE_LIMIT = 20_000
@@ -53,23 +53,10 @@ async def create_game(request: Request, game_title: str = Form(...), game_descri
         'total_playtime': 0, # in seconds
         'number_of_plays': 0,
         'total_rating': 0,
-        'number_of_ratings': 0
+        'number_of_ratings': 0,
+        'disabled': False
     }
     db.collection('games').document().set(game_data)
-    stats_ref = db.collection('game_stats').document('stats')
-    stats = stats_ref.get()
-    if stats.exists:
-        stats_data = stats.to_dict()
-        number_of_games = stats_data.get('number_of_games', 0)
-        stats_ref.update({'number_of_games': number_of_games + 1})
-    else:
-        stats_ref.set({
-            'number_of_games': 1,
-            'min_avg_playtime': float('inf'),
-            'max_avg_playtime': 0,
-            'total_playtime_all_games': 0,
-            'total_number_of_plays_all_games': 0
-        })
     return {"message": "Game created successfully"}
 
 
@@ -101,50 +88,34 @@ class PlayTime(BaseModel):
 
 
 @router.put("/games/{game_id}/playtime")
-async def update_playtime(game_id: str, play_time: PlayTime):
+async def update_playtime(game_id: str, play_time: PlayTime, request: Request):
+    header = request.headers
+    token = header.get('Authorization')
+    user_email = await get_current_user_email(token)
     game_ref = db.collection('games').document(game_id)
     game = game_ref.get()
     if game.exists:
         game_data = game.to_dict()
+        game_users_ref = db.collection("games").document(game_id).collection("users")
+        game_users = game_users_ref.where("email_id", "==", user_email).stream()
         current_total_playtime = game_data.get('total_playtime', 0)
-        number_of_plays = game_data.get('number_of_plays', 0)
         new_total_playtime = current_total_playtime + play_time.play_time
-        new_number_of_plays = number_of_plays + 1
-        game_ref.update({
-            'total_playtime': new_total_playtime,
-            'number_of_plays': new_number_of_plays
-        })
-
-        games = db.collection('games').stream()
-        min_avg_playtime = None
-        max_avg_playtime = None
-        for game in games:
-            game_data = game.to_dict()
-            total_playtime = game_data.get('total_playtime', 0)
+        total_rating = game_data.get('total_rating', 0)
+        number_of_ratings = game_data.get('number_of_ratings', 0) 
+        if (len(list(game_users)) == 0):
             number_of_plays = game_data.get('number_of_plays', 0)
-            if number_of_plays > 0:
-                avg_playtime = total_playtime / number_of_plays
-                if min_avg_playtime is None or avg_playtime < min_avg_playtime:
-                    min_avg_playtime = avg_playtime
-                if max_avg_playtime is None or avg_playtime > max_avg_playtime:
-                    max_avg_playtime = avg_playtime
-
-        stats_ref = db.collection('game_stats').document('stats')
-        stats = stats_ref.get()
-        if stats.exists:
-            stats_data = stats.to_dict()
-            total_playtime_all_games = stats_data.get('total_playtime_all_games', 0) + play_time.play_time
-            total_number_of_plays_all_games = stats_data.get('total_number_of_plays_all_games', 0) + 1
-            stats_ref.update({
-                'min_avg_playtime': min_avg_playtime,
-                'max_avg_playtime': max_avg_playtime,
-                'total_playtime_all_games': total_playtime_all_games,
-                'total_number_of_plays_all_games': total_number_of_plays_all_games
+            new_number_of_plays = number_of_plays + 1
+            game_ref.update({
+                'number_of_plays': new_number_of_plays
             })
-            if total_number_of_plays_all_games > 5 and max_avg_playtime != min_avg_playtime:
-                await update_all_leaderboard(total_playtime_all_games, total_number_of_plays_all_games, max_avg_playtime, min_avg_playtime)
-        return {"message": "Total playtime updated successfully"}
+            game_users_ref.document().set({
+                "email_id": user_email
+            })
+            await update_creator_leaderboard(game_id, total_rating,number_of_ratings)
+        game_ref.update({
+            'total_playtime': new_total_playtime
+        })
+        return {"message": "Playtime updated successfully"}
 
     else:
         return {"message": "Game not found"}
-
