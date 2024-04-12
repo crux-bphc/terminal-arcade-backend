@@ -5,12 +5,14 @@ from firebase_config import db
 from pydantic import BaseModel
 from api.creator_leaderboard import update_creator_leaderboard
 from api.ratings import get_current_user_email
+from fastapi import Body
+import os
 
 GAMEFILE_SIZE_LIMIT = 20_000
 router = APIRouter()
+SECRET_TOKEN = os.getenv('SECRET_TOKEN')
 
 import os
-
 
 @router.post("/games")
 async def create_game(request: Request, game_title: str = Form(...), game_description: str = Form(...), creator_id: str = Form(...), game_file: UploadFile = File(...)):
@@ -117,5 +119,19 @@ async def update_playtime(game_id: str, play_time: PlayTime, request: Request):
         })
         return {"message": "Playtime updated successfully"}
 
+    else:
+        return {"message": "Game not found"}
+
+@router.put("/games/{game_id}/disable")
+async def disable_game(game_id: str, secret_token: str = Form(...)):
+    print(secret_token)
+    if secret_token != SECRET_TOKEN:
+        return {"message": "Cannot toggle disable"}
+    game_ref = db.collection('games').document(game_id)
+    game = game_ref.get()
+    if game.exists:
+        current_status = game.to_dict().get("disabled", False)
+        game_ref.update({"disabled": not current_status})
+        return {"message": "Game disabled status toggled successfully"}
     else:
         return {"message": "Game not found"}
