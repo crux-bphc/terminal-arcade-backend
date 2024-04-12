@@ -3,10 +3,9 @@ from pydantic import BaseModel
 from firebase_config import db
 from typing import List
 from google.cloud import firestore
-import math
-from fastapi import HTTPException
 import time
 import asyncio
+from datetime import datetime
 
 
 router = APIRouter()
@@ -21,69 +20,71 @@ async def get_user_email(user_id: str):
     else:
         return None
 
-def calculate_score(total_playtime: int, number_of_plays: int, total_rating: int, number_of_ratings: int, overall_average_playtime: int, max_average_playtime: int, min_average_playtime: int):
-    average_game_playtime = total_playtime / number_of_plays
-    average_game_rating = total_rating / number_of_ratings
-    try:
-        score = (K * math.log(number_of_plays) * math.pow(average_game_rating, 1.25)) / (abs(average_game_playtime - overall_average_playtime) + (max_average_playtime - min_average_playtime))
-        return round(score * 100)
-    except ZeroDivisionError:
-        raise HTTPException(status_code = 400, detail="Division by zero error")
-    except Exception as e:
-        raise HTTPException(status_code = 500, detail=str(e))
+# def calculate_score(total_playtime: int, number_of_plays: int, total_rating: int, number_of_ratings: int, overall_average_playtime: int, max_average_playtime: int, min_average_playtime: int):
+#     average_game_playtime = total_playtime / number_of_plays
+#     average_game_rating = total_rating / number_of_ratings
+#     try:
+#         score = (K * math.log(number_of_plays) * math.pow(average_game_rating, 1.25)) / (abs(average_game_playtime - overall_average_playtime) + (max_average_playtime - min_average_playtime))
+#         return round(score * 100)
+#     except ZeroDivisionError:
+#         raise HTTPException(status_code = 400, detail="Division by zero error")
+#     except Exception as e:
+#         raise HTTPException(status_code = 500, detail=str(e))
 
 class LeaderboardEntry(BaseModel):
     email_id: str
     score: int
 
-async def update_creator_leaderboard(game_id: str, total_rating: int, number_of_ratings: int, total_number_of_plays_all_games: int, total_playtime_all_games: int, max_avg_playtime: int, min_avg_playtime: int):
+async def update_creator_leaderboard(game_id: str, total_rating: int, number_of_ratings: int):
     if number_of_ratings == 0:
-        return
+        avg_rating = 0
     games_ref = db.collection('games')
     game = games_ref.document(game_id).get()
     if not game.exists:
         return
     game_data = game.to_dict()
-    total_playtime = game_data.get('total_playtime', 0)
     number_of_plays = game_data.get('number_of_plays', 0)
-    if total_number_of_plays_all_games > 5 and number_of_plays > 0:
-        overall_average_playtime = total_playtime_all_games / total_number_of_plays_all_games
-        score = calculate_score(total_playtime, number_of_plays, total_rating, number_of_ratings, overall_average_playtime, max_avg_playtime, min_avg_playtime)
-        leaderboard_ref = db.collection('leaderboard').document(game_id)
-        leaderboard_entry = leaderboard_ref.get()
-        if leaderboard_entry.exists:
-            leaderboard_ref.update({'score': score})
-        else:
-            leaderboard_ref.set({
-                'game_id': game_id,
-                'score': score
-            })
+    avg_rating = total_rating / number_of_plays
+    score = avg_rating + number_of_plays
+    leaderboard_ref = db.collection('leaderboard').document(game_id)
+    leaderboard_entry = leaderboard_ref.get()
+    if leaderboard_entry.exists:
+        leaderboard_ref.update({
+            'score': score,
+            'updated_at': datetime.now()
+        })
+    else:
+        leaderboard_ref.set({
+            'game_id': game_id,
+            'score': score,
+            'updated_at': datetime.now()
+        })
 
-async def update_all_leaderboard(total_playtime_all_games: int, total_number_of_plays_all_games: int, max_avg_playtime: int, min_avg_playtime: int):
-    if total_number_of_plays_all_games == 0:
-        return
+# async def update_all_leaderboard(total_playtime_all_games: int, total_number_of_plays_all_games: int, max_avg_playtime: int, min_avg_playtime: int):
+#     if total_number_of_plays_all_games == 0:
+#         return
 
-    games_ref = db.collection('games')
-    games = games_ref.stream()
+#     games_ref = db.collection('games')
+#     games = games_ref.stream()
 
-    ovr_avg_playtime = total_playtime_all_games / total_number_of_plays_all_games
-    for game in games:
-        game_data = game.to_dict()
-        total_playtime = game_data.get('total_playtime', 0)
-        number_of_plays = game_data.get('number_of_plays', 0)
-        total_rating = game_data.get('total_rating', 0)
-        number_of_ratings = game_data.get('number_of_ratings', 0)
-        if number_of_ratings > 0 and number_of_plays >= 2:
-            leaderboard_score = calculate_score(total_playtime, number_of_plays, total_rating, number_of_ratings, ovr_avg_playtime, max_avg_playtime, min_avg_playtime)
-            leaderboard_ref = db.collection('leaderboard').document(game.id)
-            leaderboard_entry = leaderboard_ref.get()
-            if leaderboard_entry.exists:
-                leaderboard_ref.update({'score': leaderboard_score})
-            else:
-                leaderboard_ref.set({
-                    'game_id': game.id,
-                    'score': leaderboard_score
-                })
+#     ovr_avg_playtime = total_playtime_all_games / total_number_of_plays_all_games
+#     for game in games:
+#         game_data = game.to_dict()
+#         total_playtime = game_data.get('total_playtime', 0)
+#         number_of_plays = game_data.get('number_of_plays', 0)
+#         total_rating = game_data.get('total_rating', 0)
+#         number_of_ratings = game_data.get('number_of_ratings', 0)
+#         if number_of_ratings > 0 and number_of_plays >= 2:
+#             leaderboard_score = calculate_score(total_playtime, number_of_plays, total_rating, number_of_ratings, ovr_avg_playtime, max_avg_playtime, min_avg_playtime)
+#             leaderboard_ref = db.collection('leaderboard').document(game.id)
+#             leaderboard_entry = leaderboard_ref.get()
+#             if leaderboard_entry.exists:
+#                 leaderboard_ref.update({'score': leaderboard_score})
+#             else:
+#                 leaderboard_ref.set({
+#                     'game_id': game.id,
+#                     'score': leaderboard_score
+#                 })
 
 cache = {
     'leaderboard': [],
@@ -94,7 +95,7 @@ cache = {
 async def update_leaderboard_cache():
     current_time = time.time()
     leaderboard_ref = db.collection('leaderboard')
-    leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).stream()
+    leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).order_by('updated_at').stream()
     sorted_leaderboard = []
     user_scores = {}
     for entry in leaderboard_entries:
@@ -121,7 +122,6 @@ async def update_leaderboard_cache():
 async def update_leaderboard_periodically():
     while True:
         await asyncio.to_thread(update_leaderboard_cache)
-        # await update_leaderboard_cache()
         await asyncio.sleep(30)
 
 asyncio.create_task(update_leaderboard_periodically())
