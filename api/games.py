@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Form, UploadFile, File
+from fastapi import APIRouter, Form, UploadFile, File, Request
 from firebase_admin import storage
 from datetime import datetime
 from firebase_config import db
 from pydantic import BaseModel
 from api.creator_leaderboard import update_creator_leaderboard, update_all_leaderboard
+from api.ratings import get_current_user_email
 
 GAMEFILE_SIZE_LIMIT = 20_000
 router = APIRouter()
@@ -12,7 +13,7 @@ import os
 
 
 @router.post("/games")
-async def create_game(game_title: str = Form(...), game_description: str = Form(...), creator_id: str = Form(...), game_file: UploadFile = File(...)):
+async def create_game(request: Request, game_title: str = Form(...), game_description: str = Form(...), creator_id: str = Form(...), game_file: UploadFile = File(...)):
     if not game_file.filename.endswith('.py'):
         return {"error": "Invalid file type. Only .py files are allowed."}
     
@@ -20,6 +21,18 @@ async def create_game(game_title: str = Form(...), game_description: str = Form(
         return {
             "error": "file is too big to be uploaded. File must must be smaller than 20 KB"
         }
+    headers = request.headers
+    token = headers.get('Authorization')
+    user_email = await get_current_user_email(token)
+    users_ref = db.collection('users')
+    users_query = users_ref.where('email_id', '==', user_email)
+    users = users_query.stream()
+
+    user = next(users, None)
+    if user is None:
+        return {"error": "User not found."}
+    creator_id = user.id
+
 
     bucket = storage.bucket()
     base_filename, file_extension = os.path.splitext(game_file.filename)
