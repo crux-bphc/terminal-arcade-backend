@@ -100,6 +100,19 @@ async def rated_by_user(game_id: str, request: Request):
     headers = request.headers
     token = headers.get('Authorization')
     user_email = await get_current_user_email(token)
+    game_ref = db.collection('games').document(game_id)
+    game = game_ref.get()
+    if not game.exists:
+        return {"message": "Game not found"}
+    creator_id = game.to_dict().get("creator_id")
+    if creator_id is None:
+        return {"message": "Creator ID not found"}
+    user_ref = db.collection('users').document(creator_id)
+    user = user_ref.get()
+    if not user.exists:
+        return {"message": "User not found"}
+    if user.to_dict().get("email_id") == user_email:
+        return {"message": "user has rated the game"}
     ratings_query = db.collection("games").document(game_id).collection("ratings").where('user_email', '==', user_email)
     ratings = ratings_query.stream()
     if len(list(ratings)) > 0:
