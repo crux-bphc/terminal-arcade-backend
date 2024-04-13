@@ -11,10 +11,7 @@ from api.player_leaderboard import router as player_leaderboard
 
 app = FastAPI()
 
-origins = [
-    "https://terminal-arcade.vercel.app/",
-    "http://localhost:5173"  
-]
+origins = ["https://terminal-arcade.crux-bphc.com/", "http://localhost:5173/"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,8 +28,10 @@ app.include_router(ratings_router)
 app.include_router(creator_leaderboard)
 app.include_router(player_leaderboard)
 
-app.middleware("http")(lambda request, call_next: auth_middleware(request, call_next)) 
+app.middleware("http")(lambda request, call_next: auth_middleware(request, call_next))
+
 
 @app.get("/")
 def read_root():
     return {"Hello": "world"}
+
