@@ -92,8 +92,49 @@ cache = {
     'initialized': False
 }
 
-async def update_leaderboard_cache():
-    current_time = time.time()
+# async def update_leaderboard_cache():
+#     current_time = time.time()
+#     leaderboard_ref = db.collection('leaderboard')
+#     leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).order_by('updated_at').stream()
+#     sorted_leaderboard = []
+#     user_scores = {}
+#     print("updating time")
+#     for entry in leaderboard_entries:
+#         entry_data = entry.to_dict()
+#         game_id = entry_data.get('game_id')
+#         game_ref = db.collection('games').document(game_id)
+#         game = game_ref.get()
+#         if game.exists:
+#             game_data = game.to_dict()
+#             creator_id = game_data.get('creator_id')
+#             user_ref = db.collection('users').document(creator_id)
+#             user = user_ref.get()
+#             if user.exists:
+#                 user_data = user.to_dict()
+#                 email_id = user_data.get('email_id')
+#                 score = entry_data.get('score', 0)
+#                 if email_id not in user_scores or score > user_scores[email_id]:
+#                     user_scores[email_id] = score
+#                     sorted_leaderboard.append(LeaderboardEntry(email_id = email_id, score = score))
+#     cache['leaderboard'] = sorted_leaderboard
+#     cache['last_updated'] = current_time
+#     cache['initialized'] = True
+
+# async def update_leaderboard_periodically():
+#     while True:
+#         await asyncio.to_thread(update_leaderboard_cache)
+#         await asyncio.sleep(30)
+
+# asyncio.create_task(update_leaderboard_periodically())
+
+# @router.get("/creator_leaderboard", response_model=List[LeaderboardEntry])
+# async def get_leaderboard():
+#     if not cache['initialized']:
+#         await update_leaderboard_cache()
+#     return cache['leaderboard']
+    
+@router.get("/creator_leaderboard", response_model=List[LeaderboardEntry])
+async def get_leaderboard():
     leaderboard_ref = db.collection('leaderboard')
     leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).order_by('updated_at').stream()
     sorted_leaderboard = []
@@ -115,20 +156,4 @@ async def update_leaderboard_cache():
                 if email_id not in user_scores or score > user_scores[email_id]:
                     user_scores[email_id] = score
                     sorted_leaderboard.append(LeaderboardEntry(email_id = email_id, score = score))
-    cache['leaderboard'] = sorted_leaderboard
-    cache['last_updated'] = current_time
-    cache['initialized'] = True
-
-async def update_leaderboard_periodically():
-    while True:
-        await asyncio.to_thread(update_leaderboard_cache)
-        await asyncio.sleep(30)
-
-asyncio.create_task(update_leaderboard_periodically())
-
-@router.get("/creator_leaderboard", response_model=List[LeaderboardEntry])
-async def get_leaderboard():
-    if not cache['initialized']:
-        await update_leaderboard_cache()
-    return cache['leaderboard']
-
+    return sorted_leaderboard
