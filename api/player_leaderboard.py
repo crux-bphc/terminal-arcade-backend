@@ -49,28 +49,40 @@ cache = {
     'initialized': False
 }
 
-async def update_player_leaderboard_cache():
-    current_time = time.time()
+# def update_player_leaderboard_cache():
+#     print("updating cache")
+#     current_time = time.time()
+#     leaderboard_ref = db.collection('player_leaderboard')
+#     leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).order_by('updated_at').stream()
+#     sorted_leaderboard = []
+#     for entry in leaderboard_entries:
+#         entry_data = entry.to_dict()
+#         sorted_leaderboard.append(PlayerLeaderboardEntry(score = entry_data.get('score', 0), email = entry_data.get('email'), updated_at = entry_data.get('updated_at')))
+#     cache['player_leaderboard'] = sorted_leaderboard
+#     cache['last_updated'] = current_time
+#     cache['initialized'] = True
+
+# async def update_player_leaderboard_periodically():
+#     while True:
+#         await asyncio.to_thread(update_player_leaderboard_cache)
+#         await asyncio.sleep(30)
+
+# asyncio.create_task(update_player_leaderboard_periodically())
+
+# @router.get("/player_leaderboard", response_model=List[PlayerLeaderboardEntry])
+# async def get_player_leaderboard():
+#     current_time = time.time()
+#     if not cache['initialized'] or current_time - cache['last_updated'] > 30:
+#         await update_player_leaderboard_cache()
+#     return cache['player_leaderboard']
+
+
+@router.get("/player_leaderboard", response_model=List[PlayerLeaderboardEntry])
+async def get_player_leaderboard():
     leaderboard_ref = db.collection('player_leaderboard')
     leaderboard_entries = leaderboard_ref.order_by('score', direction = firestore.Query.DESCENDING).order_by('updated_at').stream()
     sorted_leaderboard = []
     for entry in leaderboard_entries:
         entry_data = entry.to_dict()
         sorted_leaderboard.append(PlayerLeaderboardEntry(score = entry_data.get('score', 0), email = entry_data.get('email'), updated_at = entry_data.get('updated_at')))
-    cache['player_leaderboard'] = sorted_leaderboard
-    cache['last_updated'] = current_time
-    cache['initialized'] = True
-
-async def update_player_leaderboard_periodically():
-    while True:
-        await asyncio.to_thread(update_player_leaderboard_cache)
-        await asyncio.sleep(30)
-
-asyncio.create_task(update_player_leaderboard_periodically())
-
-@router.get("/player_leaderboard", response_model=List[PlayerLeaderboardEntry])
-async def get_player_leaderboard():
-    current_time = time.time()
-    if not cache['initialized'] or current_time - cache['last_updated'] > 30:
-        await update_player_leaderboard_cache()
-    return cache['player_leaderboard']
+    return sorted_leaderboard
