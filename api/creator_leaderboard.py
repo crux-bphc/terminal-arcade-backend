@@ -45,7 +45,7 @@ async def update_creator_leaderboard(game_id: str, total_rating: int, number_of_
     game_data = game.to_dict()
     number_of_plays = game_data.get('number_of_plays', 0)
     avg_rating = total_rating / number_of_plays
-    score = avg_rating + number_of_plays
+    score = round(avg_rating + number_of_plays)
     leaderboard_ref = db.collection('leaderboard').document(game_id)
     leaderboard_entry = leaderboard_ref.get()
     if leaderboard_entry.exists:
