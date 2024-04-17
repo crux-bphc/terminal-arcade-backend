@@ -8,7 +8,7 @@ from api.ratings import get_current_user_email
 from fastapi import Body
 import os
 
-GAMEFILE_SIZE_LIMIT = 20_000
+GAMEFILE_SIZE_LIMIT = 30_000
 router = APIRouter()
 SECRET_TOKEN = os.getenv('SECRET_TOKEN')
 
