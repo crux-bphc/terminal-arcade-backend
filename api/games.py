@@ -21,7 +21,7 @@ async def create_game(request: Request, game_title: str = Form(...), game_descri
     
     if game_file.size > GAMEFILE_SIZE_LIMIT:
         return {
-            "error": "file is too big to be uploaded. File must must be smaller than 20 KB"
+            "error": f"file is too big to be uploaded. File must must be smaller than {GAMEFILE_SIZE_LIMIT / 1000: .1} KB"
         }
     headers = request.headers
     token = headers.get('Authorization')
