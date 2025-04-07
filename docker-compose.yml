@@ -5,8 +5,6 @@ services:
     user: postgres
     env_file: 
       - postgres-testing.env
-    ports:
-     - 5432:5432
     profiles:
       - dev
 
@@ -16,10 +14,12 @@ services:
     env_file:
       - .env
       - postgres-testing.env
-    ports:
-      - "3007:5173"
     profiles:
       - dev 
+    ports:
+      - 8080:80
+    depends_on:
+      - db-testing
 
 
   backend: 
@@ -29,7 +29,7 @@ services:
       - .env
       - postgres.env
     ports:
-      - "3007:5173"
+      - "3007:80"
     profiles:
       - prod
 
@@ -41,8 +41,6 @@ services:
       - postgres.env
     volumes:
       - pg-prod:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
     profiles:
       - prod
 
