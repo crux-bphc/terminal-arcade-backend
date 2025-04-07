@@ -8,11 +8,13 @@ from api.brython import router as brython_router
 from api.ratings import router as ratings_router
 from api.creator_leaderboard import router as creator_leaderboard
 from api.player_leaderboard import router as player_leaderboard
+from models import create_db_and_init
 
 app = FastAPI()
 
 origins = ["https://terminal-arcade.crux-bphc.com/", "http://localhost:5173/"]
 
+create_db_and_init()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -27,7 +29,6 @@ app.include_router(brython_router)
 app.include_router(ratings_router)
 app.include_router(creator_leaderboard)
 app.include_router(player_leaderboard)
-
 app.middleware("http")(lambda request, call_next: auth_middleware(request, call_next))
 
 
