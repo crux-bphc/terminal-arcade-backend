@@ -34,4 +34,3 @@ app.middleware("http")(lambda request, call_next: auth_middleware(request, call_
 @app.get("/")
 def read_root():
     return {"Hello": "world"}
-
