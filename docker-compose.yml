@@ -1,0 +1,50 @@
+services:
+  db-testing:
+    image: postgres:12.22-bookworm
+    restart: always
+    user: postgres
+    env_file: 
+      - postgres-testing.env
+    ports:
+     - 5432:5432
+    profiles:
+      - dev
+
+  backend-testing: 
+    build:
+      context: .
+    env_file:
+      - .env
+      - postgres-testing.env
+    ports:
+      - "3007:5173"
+    profiles:
+      - dev 
+
+
+  backend: 
+    build:
+      context: .
+    env_file:
+      - .env
+      - postgres.env
+    ports:
+      - "3007:5173"
+    profiles:
+      - prod
+
+  db:
+    image: postgres:12.22-bookworm
+    restart: always
+    user: postgres
+    env_file: 
+      - postgres.env
+    volumes:
+      - pg-prod:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    profiles:
+      - prod
+
+volumes: 
+  pg-prod:
