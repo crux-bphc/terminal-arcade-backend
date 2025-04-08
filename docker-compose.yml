@@ -40,9 +40,6 @@ services:
     env_file: 
       - postgres.env
     volumes:
-      - pg-prod:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql/data
     profiles:
       - prod
-
-volumes: 
-  pg-prod:
