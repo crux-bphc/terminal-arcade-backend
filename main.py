@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.middleware import auth_middleware
 from api.games import router as games_router
@@ -20,8 +22,10 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-origins = ["https://terminal-arcade.crux-bphc.com", "http://localhost:5173"]
-
+origins = [
+    "https://terminal-arcade.crux-bphc.com",
+    "http://localhost:5173",
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +33,14 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+
+os.makedirs("game_files", exist_ok=True)
+app.mount(
+    "/game_files",
+    StaticFiles(directory="game_files"),
+    name="game_files",
 )
 
 app.include_router(games_router)
