@@ -2,7 +2,6 @@ services:
   db-testing:
     image: postgres:12.22-bookworm
     restart: always
-    user: postgres
     env_file: 
       - postgres-testing.env
     profiles:
@@ -29,14 +28,14 @@ services:
       - .env
       - postgres.env
     ports:
-      - "3007:80"
+      - 3013:80
     profiles:
       - prod
 
   db:
     image: postgres:12.22-bookworm
     restart: always
-    user: postgres
+    user: 1001:1001
     env_file: 
       - postgres.env
     volumes:
