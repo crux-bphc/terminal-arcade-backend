@@ -1,9 +1,6 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    MappedAsDataclass,
-    sessionmaker,
-)
+from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
 import os
 
 username = os.getenv("POSTGRES_USER")
@@ -12,11 +9,13 @@ host = os.getenv("POSTGRES_HOST")
 db = os.getenv("POSTGRES_DB")
 assert not any([e is None for e in [username, password, host, db]])
 
-engine = create_engine(f"postgresql://{username}:{password}@{host}/{db}")
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_async_engine(
+    f"postgresql+asyncpg://{username}:{password}@{host}/{db}", future=True, echo=True
+)
+session_maker = async_sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-class SQLBase(DeclarativeBase, MappedAsDataclass):
+class SQLBase(DeclarativeBase):
     pass
 
 
@@ -28,13 +27,13 @@ from .player_leaderboard import DbPlayerLeaderBoardEntry
 from .leaderboard import DbLeaderboardEntry
 
 
-def create_db_and_init():
-    SQLBase.metadata.create_all(engine)
+async def create_db_and_init():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLBase.metadata.drop_all)
+        await conn.run_sync(SQLBase.metadata.create_all)
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    async with session_maker() as session:
+        async with session.begin():
+            yield session

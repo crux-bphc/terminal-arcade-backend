@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,11 +11,18 @@ from api.creator_leaderboard import router as creator_leaderboard
 from api.player_leaderboard import router as player_leaderboard
 from models import create_db_and_init
 
-app = FastAPI()
 
-origins = ["https://terminal-arcade.crux-bphc.com/", "http://localhost:5173/"]
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await create_db_and_init()
+    yield
 
-create_db_and_init()
+
+app = FastAPI(lifespan=lifespan)
+
+origins = ["https://terminal-arcade.crux-bphc.com", "http://localhost:5173"]
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
