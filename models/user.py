@@ -18,4 +18,8 @@ class DbUser(SQLBase):
     ratings_given: Mapped[Optional["DbRating"]] = relationship(
         back_populates="rating_user"
     )
+    played_games: Mapped[List["DbGame"]] = relationship(
+        back_populates="played_users", secondary="plays_association_table"
+    )
+
     __tablename__: str = "user"

@@ -1,42 +1,35 @@
-from fastapi import APIRouter
-from typing import Optional
+from fastapi import APIRouter, Depends
+from typing import Annotated, Optional
 from pydantic import BaseModel
-from firebase_config import db
 from typing import List
-from google.cloud import firestore
 from datetime import datetime
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from models import get_db
+from models.player_leaderboard import DbPlayerLeaderBoardEntry
 
 router = APIRouter()
 
 
-async def update_player_leaderboard(user_email: Optional[str]):
+async def update_player_leaderboard(db: AsyncSession, user_email: Optional[str]):
     if user_email is None:
         return {"message": "User not found"}
 
-    leaderboard_query = db.collection("player_leaderboard").where(
-        "email", "==", user_email
-    )
-    leaderboard_entries = list(leaderboard_query.stream())
     current_time = datetime.now()
 
-    if leaderboard_entries:
-        leaderboard_entry = leaderboard_entries[0]
-        leaderboard_ref = db.collection("player_leaderboard").document(
-            leaderboard_entry.id
+    await db.execute(
+        insert(DbPlayerLeaderBoardEntry)
+        .values(player_email=user_email, score=10, updated_at=current_time)
+        .on_conflict_do_update(
+            index_elements=["player_email"],
+            set_={
+                "score": DbPlayerLeaderBoardEntry.score + 10,
+                "updated_at": current_time,
+            },
         )
-        leaderboard_data = leaderboard_entry.to_dict()
-        assert leaderboard_data is not None
-        current_score = leaderboard_data.get("score", 0)
-        new_score = current_score + 10
-        leaderboard_ref.update(
-            {"score": new_score, "email": user_email, "updated_at": current_time}
-        )
-    else:
-        leaderboard_ref = db.collection("player_leaderboard").document()
-        leaderboard_ref.set(
-            {"score": 10, "email": user_email, "updated_at": current_time}
-        )
+    )
 
 
 class PlayerLeaderboardEntry(BaseModel):
@@ -76,22 +69,16 @@ cache = {"player_leaderboard": [], "last_updated": 0, "initialized": False}
 
 
 @router.get("/player_leaderboard", response_model=List[PlayerLeaderboardEntry])
-async def get_player_leaderboard():
-    leaderboard_ref = db.collection("player_leaderboard")
-    leaderboard_entries = (
-        leaderboard_ref.order_by("score", direction=firestore.Query.DESCENDING)
-        .order_by("updated_at")
-        .stream()
-    )
-    sorted_leaderboard = []
-    for entry in leaderboard_entries:
-        entry_data = entry.to_dict()
-        sorted_leaderboard.append(
-            PlayerLeaderboardEntry(
-                score=entry_data.get("score", 0),
-                email=entry_data.get("email"),
-                updated_at=entry_data.get("updated_at"),
-            )
+async def get_player_leaderboard(db: Annotated[AsyncSession, Depends(get_db)]):
+    leaderboard_entries = await db.scalars(
+        select(DbPlayerLeaderBoardEntry).order_by(
+            DbPlayerLeaderBoardEntry.score.desc(), DbPlayerLeaderBoardEntry.updated_at
         )
-    return sorted_leaderboard
-
+    )
+    result = [
+        PlayerLeaderboardEntry(
+            score=entry.score, email=entry.player_email, updated_at=entry.updated_at
+        )
+        for entry in leaderboard_entries
+    ]
+    return result

@@ -15,3 +15,6 @@ class DbRating(SQLBase):
     game: Mapped[DbGame] = relationship(back_populates="ratings")
     rating_user: Mapped[DbUser] = relationship(back_populates="ratings_given")
     __tablename__ = "rating"
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
