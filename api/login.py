@@ -1,5 +1,6 @@
 import os
-from fastapi import APIRouter
+from typing import Annotated
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import pyotp
 from cachetools import TTLCache
@@ -9,8 +10,13 @@ from email.mime.text import MIMEText
 from dotenv import load_dotenv
 import jwt
 import datetime
-from firebase_config import db
+
+from sqlalchemy import insert
+from sqlalchemy.ext.asyncio import AsyncSession
 import re
+
+from models import get_db
+from models.user import DbUser
 
 load_dotenv()
 
@@ -72,26 +78,24 @@ async def login(request: LoginRequest):
 
 
 @router.post("/verify-otp")
-async def verify(request: OTPVerificationRequest):
+async def verify(
+    request: OTPVerificationRequest, db: Annotated[AsyncSession, Depends(get_db)]
+):
     actual_otp = otps.get(request.email)
-    if actual_otp and actual_otp == request.otp:
-        payload = {
-            "sub": request.email,
-            "iat": datetime.datetime.now(datetime.UTC),
-            "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1),
-        }
-        assert SECRET_KEY is not None
-        token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-
-        users_ref = db.collection("users")
-        user = users_ref.where("email_id", "==", request.email).get()
-        if user:
-            user_id = user[0].id
-        else:
-            new_user = users_ref.document()
-            new_user.set({"email_id": request.email})
-            user_id = new_user.id
-
-        return {"access_token": token, "token_type": "bearer", "user_id": user_id}
-    else:
+    if actual_otp is None or actual_otp != request.otp:
         return {"error": "Invalid OTP"}
+
+    payload = {
+        "sub": request.email,
+        "iat": datetime.datetime.now(datetime.UTC),
+        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1),
+    }
+    assert SECRET_KEY is not None
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+    user = await db.get(DbUser, request.email)
+    if user is None:
+        qry = insert(DbUser).values(email=request.email)
+        await db.execute(qry)
+
+    return {"access_token": token, "token_type": "bearer"}
