@@ -164,3 +164,4 @@ key.json
 
 /terminal_arcade
 *.cfg
+pgdata/*
