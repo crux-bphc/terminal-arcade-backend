@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+game_files
+
 # C extensions
 *.so
 
@@ -164,4 +166,4 @@ key.json
 
 /terminal_arcade
 *.cfg
-pgdata/*
+pgdata
