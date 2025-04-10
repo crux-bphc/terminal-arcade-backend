@@ -50,8 +50,8 @@ services:
 
   db:
     image: postgres:12.22-bookworm
-    restart: always
     user: 1001:1001
+    restart: always
     env_file: 
       - postgres.env
     volumes:

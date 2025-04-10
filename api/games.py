@@ -16,6 +16,7 @@ from models.game import DbGame
 from models.user import DbUser
 
 GAMEFILE_SIZE_LIMIT = 30_000
+GAMEFILE_BASE_URL =  os.getenv("GAMEFILE_BASE_URL")
 router = APIRouter()
 SECRET_TOKEN = os.getenv("SECRET_TOKEN")
 assert SECRET_TOKEN is not None
@@ -56,7 +57,8 @@ async def create_game(
     with open(filename, "wb") as f:
         f.write(data)
 
-    file_url = f"{request.base_url}{filename}"
+    assert GAMEFILE_BASE_URL is not None
+    file_url = f"{GAMEFILE_BASE_URL}{filename}"
 
     new_game = DbGame(
         title=game_title,
