@@ -4,7 +4,6 @@ from typing import Annotated, List
 from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
 from sqlalchemy.dialects.postgresql import insert
 
 from models import get_db

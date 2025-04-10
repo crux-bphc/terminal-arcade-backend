@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import (
+    HTTPBearer,
+)
 
-from api.middleware import auth_middleware
 from api.games import router as games_router
 from api.login import router as login_router
 from api.brython import router as brython_router
@@ -49,10 +51,11 @@ app.include_router(brython_router)
 app.include_router(ratings_router)
 app.include_router(creator_leaderboard)
 app.include_router(player_leaderboard)
-app.middleware("http")(lambda request, call_next: auth_middleware(request, call_next))
+# app.middleware("http")(lambda request, call_next: auth_middleware(request, call_next))
+
+token_extractor = HTTPBearer()
 
 
 @app.get("/")
 def read_root():
     return {"Hello": "world"}
-

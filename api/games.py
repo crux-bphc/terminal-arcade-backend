@@ -4,10 +4,9 @@ from datetime import datetime
 
 from sqlalchemy import select, update
 from pydantic import BaseModel
+from api.auth import get_email
 from api.creator_leaderboard import update_creator_leaderboard
-from api.ratings import get_current_user_email
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
 
 import os
 
@@ -24,25 +23,23 @@ assert SECRET_TOKEN is not None
 @router.post("/games")
 async def create_game(
     request: Request,
+    user_email: Annotated[str, Depends(get_email)],
     db: Annotated[AsyncSession, Depends(get_db)],
     game_title: str = Form(...),
     game_description: str = Form(...),
     # creator_id: str = Form(...),
     game_file: UploadFile = File(...),
 ):
-    if not game_file.filename.endswith(".py"):
+    if game_file.filename is None or not game_file.filename.endswith(".py"):
         return {"error": "Invalid file type. Only .py files are allowed."}
+
+    if game_file.size is None:
+        return {"error": "game file size not found"}
 
     if game_file.size > GAMEFILE_SIZE_LIMIT:
         return {
             "error": f"file is too big to be uploaded. File must must be smaller than {GAMEFILE_SIZE_LIMIT / 1000: .1} KB"
         }
-
-    headers = request.headers
-    token = headers.get("Authorization")
-    assert token is not None  # should be taken care of by the middleware
-
-    user_email = await get_current_user_email(token)
 
     user = await db.get(DbUser, user_email)
     if user is None:
@@ -117,14 +114,9 @@ class PlayTime(BaseModel):
 async def update_playtime(
     game_id: str,
     play_time: PlayTime,
-    request: Request,
+    user_email: Annotated[str, Depends(get_email)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    token = request.headers.get("Authorization")
-    assert token is not None
-
-    user_email = await get_current_user_email(token)
-
     game = await db.get(DbGame, game_id)
 
     if game:
@@ -143,7 +135,9 @@ async def update_playtime(
             )
             await db.execute(game.add_played_user(user_email))
 
-            await update_creator_leaderboard(db, game_id, game.total_rating, game.number_of_ratings)
+            await update_creator_leaderboard(
+                db, game_id, game.total_rating, game.number_of_ratings
+            )
 
         await db.execute(
             update(DbGame)
@@ -165,6 +159,7 @@ async def disable_game(
     db: Annotated[AsyncSession, Depends(get_db)],
     secret_token: str = Form(...),
 ):
+    assert SECRET_TOKEN is not None
     if secret_token != SECRET_TOKEN:
         return {"message": "Cannot toggle disable"}
 
