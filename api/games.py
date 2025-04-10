@@ -9,6 +9,7 @@ from api.creator_leaderboard import update_creator_leaderboard
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import os
+import hashlib
 
 from models import get_db
 from models.game import DbGame
@@ -45,17 +46,15 @@ async def create_game(
     if user is None:
         return {"error": "User not found."}
 
-    base_filename, file_extension = os.path.splitext(game_file.filename)
-    filename = f"game_files/{game_file.filename}"
-
-    counter = 1
-    while os.path.exists(filename):
-        filename = f"{base_filename}_{counter}{file_extension}"
-        counter += 1
+    sha1 = hashlib.sha1()
+    data = await game_file.read()
+    sha1.update(data)
+    sha1 = sha1.hexdigest()
+    filename = f"game_files/{sha1}.py"
 
     os.makedirs("game_files", exist_ok=True)
     with open(filename, "wb") as f:
-        f.write(await game_file.read())
+        f.write(data)
 
     file_url = f"{request.base_url}{filename}"
 
