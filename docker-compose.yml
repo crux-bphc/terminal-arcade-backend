@@ -20,6 +20,18 @@ services:
     depends_on:
       - db-testing
 
+  nginx:
+    image: nginx:stable
+    restart: always
+    volumes:
+      - ./nginx-http.conf:/etc/nginx/nginx.conf
+      - ./game_files:/game_files
+    ports:
+      - 3014:80
+    profiles:
+      - prod
+      - dev
+
 
   backend: 
     build:
@@ -27,6 +39,8 @@ services:
     env_file:
       - .env
       - postgres.env
+    volumes:
+      - ./game_files:/backend/game_files
     ports:
       - 3013:80
     profiles:
