@@ -13,6 +13,7 @@ from api.brython import router as brython_router
 from api.ratings import router as ratings_router
 from api.creator_leaderboard import router as creator_leaderboard
 from api.player_leaderboard import router as player_leaderboard
+from api.timer_middleware import timer_middleware
 from models import create_db_and_init
 
 
@@ -52,6 +53,7 @@ app.include_router(ratings_router)
 app.include_router(creator_leaderboard)
 app.include_router(player_leaderboard)
 # app.middleware("http")(lambda request, call_next: auth_middleware(request, call_next))
+app.middleware("http")(timer_middleware)
 
 token_extractor = HTTPBearer()
 
