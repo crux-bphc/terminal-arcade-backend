@@ -45,13 +45,15 @@ services:
       - ./game_files:/backend/game_files
     ports:
       - 3013:80
+    depends_on:
+      - db
     profiles:
       - prod
 
   db:
     image: postgres:12.22-bookworm
-    user: 1001:1001
     restart: always
+    user: 1001:1001
     env_file: 
       - postgres.env
     volumes:
