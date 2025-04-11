@@ -138,9 +138,9 @@ async def rated_by_user(
     )
 
     has_rated = await db.execute(exists_qry)
-    has_rated = has_rated.one_or_none() is not None
+    rated = has_rated.one_or_none() is not None
 
-    return {"message": f"user has {'' if has_rated else "not"} the game"}
+    return {"rated": rated}
 
     # game_ref = db.collection("games").document(game_id)
     # game = game_ref.get()
