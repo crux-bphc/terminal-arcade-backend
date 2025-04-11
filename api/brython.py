@@ -22,7 +22,7 @@ class Hanger:
 handler = Hanger()
 
 
-@router.get("/hanger/sleep/{duration}", response_class=PlainTextResponse)
+@router.get("/hanger/sleep/{duration}/", response_class=PlainTextResponse)
 async def handle_sleep(duration: float):
     try:
         duration = min(duration, 60)
@@ -34,14 +34,14 @@ async def handle_sleep(duration: float):
         return "-1"
 
 
-@router.post("/hanger/open", response_class=PlainTextResponse)
+@router.post("/hanger/open/", response_class=PlainTextResponse)
 async def handle_open_slot():
     key = handler.generate_key()
     handler.store[key] = None
     return key
 
 
-@router.post("/hanger/{key}/write", response_class=PlainTextResponse)
+@router.post("/hanger/{key}/write/", response_class=PlainTextResponse)
 async def handle_write_slot(
     key: str,
     data: str = Body(...),
@@ -53,7 +53,7 @@ async def handle_write_slot(
     return key
 
 
-@router.post("/hanger/{key}/read", response_class=PlainTextResponse)
+@router.post("/hanger/{key}/read/", response_class=PlainTextResponse)
 async def handle_read_slot(key: str):
     while True:
         if key in handler.store:
