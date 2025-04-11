@@ -57,7 +57,7 @@ def send_email(to_address, subject, message):
 
 @router.post("/login")
 async def login(request: LoginRequest):
-    pattern = r"f20(19|20|21|22|23)\d{4}@hyderabad.bits-pilani.ac.in$"
+    pattern = r"f20(19|20|21|22|23|24)\d{4}@hyderabad.bits-pilani.ac.in$"
 
     if not re.match(pattern, request.email):
         return {"error": "Invalid e-mail id"}
