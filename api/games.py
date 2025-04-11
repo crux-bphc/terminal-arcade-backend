@@ -1,4 +1,5 @@
 from typing import Annotated
+import aiofiles
 from fastapi import APIRouter, Depends, Form, UploadFile, File, Request
 from datetime import datetime
 
@@ -8,6 +9,7 @@ from api.auth import get_email
 from api.creator_leaderboard import update_creator_leaderboard
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import hashlib
 import os
 import hashlib
 
@@ -52,10 +54,10 @@ async def create_game(
     sha1.update(data)
     sha1 = sha1.hexdigest()
     filename = f"game_files/{sha1}.py"
+    
 
-    os.makedirs("game_files", exist_ok=True)
-    with open(filename, "wb") as f:
-        f.write(data)
+    async with aiofiles.open(filename, "wb") as f:
+        await f.write(data)
 
     assert GAMEFILE_BASE_URL is not None
     file_url = f"{GAMEFILE_BASE_URL}{filename}"
