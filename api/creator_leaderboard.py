@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Annotated, List
 from datetime import datetime
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
@@ -140,6 +140,7 @@ async def get_leaderboard(db: Annotated[AsyncSession, Depends(get_db)]):
         .join(DbUser.games)
         .join(DbGame.lb_entry)
         .group_by(DbUser.email)
+	.order_by(desc("score"))
     )
     return [
         LeaderboardEntry(email_id=email, score=score)
