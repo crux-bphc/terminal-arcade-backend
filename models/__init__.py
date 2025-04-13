@@ -25,6 +25,7 @@ from .user import DbUser
 from .rating import DbRating
 from .player_leaderboard import DbPlayerLeaderBoardEntry
 from .leaderboard import DbLeaderboardEntry
+import models.play
 
 
 async def create_db_and_init():
