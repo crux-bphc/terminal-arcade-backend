@@ -3,12 +3,14 @@ from typing import Annotated, Optional
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import get_db
 from models.player_leaderboard import DbPlayerLeaderBoardEntry
+from models.play import DbPlay
+from datetime import datetime
 
 router = APIRouter()
 
@@ -33,10 +35,7 @@ async def update_player_leaderboard(db: AsyncSession, user_email: Optional[str])
 
 
 class PlayerLeaderboardEntry(BaseModel):
-    score: int
     email: str
-    updated_at: datetime
-
 
 cache = {"player_leaderboard": [], "last_updated": 0, "initialized": False}
 
@@ -70,15 +69,11 @@ cache = {"player_leaderboard": [], "last_updated": 0, "initialized": False}
 
 @router.get("/player_leaderboard", response_model=List[PlayerLeaderboardEntry])
 async def get_player_leaderboard(db: Annotated[AsyncSession, Depends(get_db)]):
-    leaderboard_entries = await db.scalars(
-        select(DbPlayerLeaderBoardEntry).order_by(
-            DbPlayerLeaderBoardEntry.score.desc(), DbPlayerLeaderBoardEntry.updated_at
-        )
-    )
+    qry = select(DbPlay.user_email, func.count(DbPlay.game_id)).group_by(DbPlay.user_email).order_by(func.count(DbPlay.game_id).desc())
+    leaderboard_entries = await db.execute(qry)
+
     result = [
-        PlayerLeaderboardEntry(
-            score=entry.score, email=entry.player_email, updated_at=entry.updated_at
-        )
-        for entry in leaderboard_entries
+        PlayerLeaderboardEntry(email=email)
+        for (email, count) in leaderboard_entries
     ]
     return result
