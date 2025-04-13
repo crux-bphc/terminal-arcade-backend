@@ -3,7 +3,7 @@ import aiofiles
 from fastapi import APIRouter, Depends, Form, UploadFile, File, Request
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from pydantic import BaseModel
 from api.auth import get_email
 from api.creator_leaderboard import update_creator_leaderboard
@@ -79,10 +79,31 @@ async def create_game(
 
     return {"message": "Game created successfully"}
 
+#@router.delete("/games/{game_id}")
+#async def get_game(
+#    game_id: str, 
+#    db: Annotated[AsyncSession, Depends(get_db)], 
+#    user_email: Annotated[str, Depends(get_email)]
+#):
+#    game = await db.get(DbGame, game_id)
+#
+#    if game is None:
+#        return {"message": "Game not found"}
+#
+#    if game.creator_email != user_email:
+#        return {"message": "Unauthorized"}
+#
+#    qry = delete(DbGame).where(DbGame.game_id == game_id)
+#
+#    rows_affected = await db.execute(qry)
+#    rows_affected = rows_affected.rowcount
+#
+#    return {"message": "success" if rows_affected != 0 else "failure"}
+
 
 @router.get("/games")
 async def get_all_games(db: Annotated[AsyncSession, Depends(get_db)]):
-    games = await db.scalars(select(DbGame))
+    games = await db.scalars(select(DbGame).where(~DbGame.disabled))
     game_list = [{game.game_id: game.to_dict()} for game in games]
 
     return game_list
@@ -92,7 +113,7 @@ async def get_all_games(db: Annotated[AsyncSession, Depends(get_db)]):
 async def get_game(game_id: str, db: Annotated[AsyncSession, Depends(get_db)]):
     game = await db.get(DbGame, game_id)
 
-    if game:
+    if game is not None and not game.disabled:
         return game.to_dict()
     else:
         return {"message": "Game not found"}
@@ -160,15 +181,19 @@ async def update_playtime(
 async def disable_game(
     game_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    secret_token: str = Form(...),
+    user_email: Annotated[str, Depends(get_email)],
 ):
-    assert SECRET_TOKEN is not None
-    if secret_token != SECRET_TOKEN:
-        return {"message": "Cannot toggle disable"}
+    game = await db.get(DbGame, game_id)
+
+    if game is None:
+        return {"message": "Game not found"}
+
+    if game.creator_email != user_email:
+        return {"message": "Unauthorized"}
 
     await db.execute(
         update(DbGame)
         .where(DbGame.game_id == game_id)
-        .values(disabled=DbGame.disabled.bitwise_not())
+        .values(disabled=~DbGame.disabled)
     )
     await db.commit()
