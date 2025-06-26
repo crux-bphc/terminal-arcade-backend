@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+game_files
+
 # C extensions
 *.so
 
@@ -122,6 +124,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+postgres.env
 env/
 venv/
 ENV/
@@ -163,3 +166,4 @@ key.json
 
 /terminal_arcade
 *.cfg
+pgdata

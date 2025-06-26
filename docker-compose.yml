@@ -1,0 +1,62 @@
+services:
+  db-testing:
+    image: postgres:12.22-bookworm
+    restart: always
+    env_file: 
+      - postgres-testing.env
+    profiles:
+      - dev
+
+  backend-testing: 
+    build:
+      context: .
+    env_file:
+      - .env
+      - postgres-testing.env
+    profiles:
+      - dev 
+    volumes:
+      - ./game_files:/backend/game_files
+    ports:
+      - 8080:80
+    depends_on:
+      - db-testing
+
+  nginx:
+    image: nginx:stable
+    restart: always
+    volumes:
+      - ./nginx-http.conf:/etc/nginx/nginx.conf
+      - ./game_files:/game_files
+    ports:
+      - 3014:80
+    profiles:
+      - prod
+      - dev
+
+
+  backend: 
+    build:
+      context: .
+    env_file:
+      - .env
+      - postgres.env
+    volumes:
+      - ./game_files:/backend/game_files
+    ports:
+      - 3013:80
+    depends_on:
+      - db
+    profiles:
+      - prod
+
+  db:
+    image: postgres:12.22-bookworm
+    restart: always
+    user: 1001:1001
+    env_file: 
+      - postgres.env
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    profiles:
+      - prod
